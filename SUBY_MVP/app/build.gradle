@@ -11,11 +11,19 @@ android {
         applicationId 'com.suby.app'
         minSdk 23
         targetSdk 35
-        versionCode 4
-        versionName '0.4-livekit-calls-preview'
+        versionCode 5
+        versionName '0.5-calls-preview'
     }
 
-    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n    kotlinOptions { jvmTarget = '17' }\n\n    buildTypes {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildTypes {
         debug { minifyEnabled false }
     }
 }
