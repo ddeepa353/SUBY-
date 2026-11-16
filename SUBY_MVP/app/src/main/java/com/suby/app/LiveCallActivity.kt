@@ -12,19 +12,23 @@ import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.firebase.auth.FirebaseAuth
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.renderer.SurfaceViewRenderer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import io.livekit.android.events.collect
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class LiveCallActivity : ComponentActivity() {
     private lateinit var room: Room
     private lateinit var status: TextView
-    private lateinit var serverInput: EditText
-    private lateinit var tokenInput: EditText
     private lateinit var roomInput: EditText
     private lateinit var videoRenderer: SurfaceViewRenderer
     private var mode: String = "video"
@@ -38,19 +42,21 @@ class LiveCallActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 28, 24, 24)
         }
-        status = TextView(this).apply { text = "SUBY • ${mode.uppercase()} CALL\nLiveKit credentials required" }
-        roomInput = EditText(this).apply { hint = "Room name"; setText("suby-room") }
-        serverInput = EditText(this).apply { hint = "LiveKit Server URL (wss://...)"; isSingleLine = true }
-        tokenInput = EditText(this).apply { hint = "Participant token"; minLines = 3 }
+        status = TextView(this).apply {
+            text = "SUBY • ${mode.uppercase()} CALL\nकमरे का नाम डालें और Connect दबाएँ"
+        }
+        roomInput = EditText(this).apply {
+            hint = "Room name (दोनों users में एक जैसा)"
+            setText("suby-room")
+            isSingleLine = true
+        }
         val join = Button(this).apply { text = "Connect / Start Call" }
         val leave = Button(this).apply { text = "End Call" }
         videoRenderer = SurfaceViewRenderer(this).apply {
-            visibility = if (mode != "audio") View.VISIBLE else View.GONE
+            visibility = if (mode == "audio") View.GONE else View.VISIBLE
         }
         root.addView(status)
         root.addView(roomInput)
-        root.addView(serverInput)
-        root.addView(tokenInput)
         root.addView(join)
         root.addView(leave)
         root.addView(videoRenderer, LinearLayout.LayoutParams(
@@ -74,17 +80,22 @@ class LiveCallActivity : ComponentActivity() {
             return
         }
 
-        val url = serverInput.text.toString().trim()
-        val token = tokenInput.text.toString().trim()
         val roomName = roomInput.text.toString().trim()
-        if (!url.startsWith("wss://") || token.isBlank() || roomName.isBlank()) {
-            status.text = "LiveKit Server URL, Room name और सुरक्षित participant token भरें।"
+        if (!roomName.matches(Regex("[a-zA-Z0-9_-]{1,64}"))) {
+            status.text = "Room name में केवल English अक्षर, नंबर, _ या - रखें।"
             return
         }
 
-        status.text = "Connecting..."
+        status.text = "Firebase login और सुरक्षित call token प्राप्त हो रहा है..."
         lifecycleScope.launch {
             try {
+                val user = FirebaseAuth.getInstance().currentUser
+                    ?: FirebaseAuth.getInstance().signInAnonymously().awaitUser()
+                val idToken = user.getIdToken(false).awaitToken()
+                val credentials = withContext(Dispatchers.IO) {
+                    requestCallToken(roomName, idToken)
+                }
+
                 launch {
                     room.events.collect { event ->
                         if (event is RoomEvent.TrackSubscribed && event.track is VideoTrack) {
@@ -92,16 +103,42 @@ class LiveCallActivity : ComponentActivity() {
                         }
                     }
                 }
-                room.connect(url, token)
+
+                status.text = "LiveKit से जुड़ रहे हैं..."
+                room.connect(credentials.first, credentials.second)
+                if (mode != "audio") room.initVideoRenderer(videoRenderer)
                 room.localParticipant.setMicrophoneEnabled(true)
-                if (mode == "video") {
-                    room.initVideoRenderer(videoRenderer)
-                    room.localParticipant.setCameraEnabled(true)
-                }
-                status.text = "Connected to $roomName"
+                if (mode != "audio") room.localParticipant.setCameraEnabled(true)
+                status.text = "Connected • Room: $roomName"
             } catch (e: Exception) {
-                status.text = "Connection failed: ${e.message ?: "Check URL and token"}"
+                status.text = "कनेक्शन नहीं हुआ: ${e.message ?: "Firebase / server settings जाँचें"}"
             }
+        }
+    }
+
+    private fun requestCallToken(roomName: String, firebaseIdToken: String): Pair<String, String> {
+        val connection = (URL("https://suby-token-server.vercel.app/api/livekit-token")
+            .openConnection() as HttpURLConnection)
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 15000
+        connection.readTimeout = 15000
+        connection.doOutput = true
+        connection.setRequestProperty("Authorization", "Bearer $firebaseIdToken")
+        connection.setRequestProperty("Content-Type", "application/json")
+        try {
+            val body = JSONObject().put("roomName", roomName).toString()
+            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val response = stream.bufferedReader().use { it.readText() }
+            if (code !in 200..299) {
+                val message = try { JSONObject(response).optString("error") } catch (_: Exception) { "HTTP $code" }
+                throw IllegalStateException(message)
+            }
+            val json = JSONObject(response)
+            return Pair(json.getString("serverUrl"), json.getString("participantToken"))
+        } finally {
+            connection.disconnect()
         }
     }
 
@@ -110,7 +147,7 @@ class LiveCallActivity : ComponentActivity() {
             try {
                 room.disconnect()
                 status.text = "Call ended."
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 status.text = "Call ended."
             }
         }
