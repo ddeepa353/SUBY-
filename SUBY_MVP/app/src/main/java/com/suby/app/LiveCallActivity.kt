@@ -18,7 +18,7 @@ import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.renderer.SurfaceViewRenderer
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collect
+import io.livekit.android.events.collect
 
 class LiveCallActivity : ComponentActivity() {
     private lateinit var room: Room
