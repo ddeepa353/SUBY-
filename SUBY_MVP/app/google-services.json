@@ -1,0 +1,28 @@
+{
+  "project_info": {
+    "project_number": "621633138437",
+    "project_id": "suby-2e131",
+    "storage_bucket": "suby-2e131.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621633138437:android:a4111d72597ff2715cd16c",
+        "android_client_info": {
+          "package_name": "com.suby.app"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMc95iuLK_Ne4kq7y_K821qLkW48Mm_eE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
