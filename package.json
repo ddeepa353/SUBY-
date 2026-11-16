@@ -1,0 +1,13 @@
+{
+  "name": "suby-token-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure token API for the SUBY Android app",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "livekit-server-sdk": "^2.9.0"
+  }
+}
