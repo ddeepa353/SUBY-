@@ -13,6 +13,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Tasks
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
 import io.livekit.android.events.RoomEvent
@@ -89,10 +90,12 @@ class LiveCallActivity : ComponentActivity() {
         status.text = "Firebase login और सुरक्षित call token प्राप्त हो रहा है..."
         lifecycleScope.launch {
             try {
-                val user = FirebaseAuth.getInstance().currentUser
-                    ?: FirebaseAuth.getInstance().signInAnonymously().awaitUser()
-                val idToken = user.getIdToken(false).awaitToken()
                 val credentials = withContext(Dispatchers.IO) {
+                    val auth = FirebaseAuth.getInstance()
+                    val user = auth.currentUser ?: Tasks.await(auth.signInAnonymously()).user
+                        ?: throw IllegalStateException("Firebase sign-in failed")
+                    val idToken = Tasks.await(user.getIdToken(false)).token
+                        ?: throw IllegalStateException("Firebase ID token missing")
                     requestCallToken(roomName, idToken)
                 }
 
