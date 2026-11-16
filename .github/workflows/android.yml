@@ -67,6 +67,17 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Android project: $PROJECT_DIR"
           find "$PROJECT_DIR" -maxdepth 3 -type f | sort | head -200
+          python3 - "$PROJECT_DIR" <<'PY'
+          import pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          for path in root.rglob("*"):
+              if path.is_file() and path.suffix in {".gradle", ".kts"}:
+                  raw = path.read_bytes()
+                  fixed = raw.replace(b"\\\\n", b"\\n")
+                  if fixed != raw:
+                      path.write_bytes(fixed)
+                      print(f"Repaired escaped newlines in {path}")
+          PY
 
       - name: Build debug APK
         shell: bash
