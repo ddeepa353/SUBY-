@@ -1,7 +1,7 @@
 package com.suby.app
 
 import android.Manifest
-import android.app.Activity
+import androidx.activity.ComponentActivity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -14,12 +14,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import io.livekit.android.LiveKit
 import io.livekit.android.room.Room
-import io.livekit.android.room.RoomEvent
+import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.renderer.SurfaceViewRenderer
 import kotlinx.coroutines.launch
 
-class LiveCallActivity : Activity() {
+class LiveCallActivity : ComponentActivity() {
     private lateinit var room: Room
     private lateinit var status: TextView
     private lateinit var serverInput: EditText
@@ -39,7 +39,7 @@ class LiveCallActivity : Activity() {
         }
         status = TextView(this).apply { text = "SUBY • ${mode.uppercase()} CALL\nLiveKit credentials required" }
         roomInput = EditText(this).apply { hint = "Room name"; setText("suby-room") }
-        serverInput = EditText(this).apply { hint = "LiveKit Server URL (wss://...)"; singleLine = true }
+        serverInput = EditText(this).apply { hint = "LiveKit Server URL (wss://...)"; isSingleLine = true }
         tokenInput = EditText(this).apply { hint = "Participant token"; minLines = 3 }
         val join = Button(this).apply { text = "Connect / Start Call" }
         val leave = Button(this).apply { text = "End Call" }
