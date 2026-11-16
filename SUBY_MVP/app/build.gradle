@@ -11,8 +11,8 @@ android {
         applicationId 'com.suby.app'
         minSdk 23
         targetSdk 35
-        versionCode 5
-        versionName '0.5-calls-preview'
+        versionCode 6
+        versionName '0.6-calls-preview'
     }
 
     compileOptions {
@@ -30,5 +30,7 @@ android {
 
 dependencies {
     implementation 'io.livekit:livekit-android:2.30.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.7'\n    implementation 'androidx.activity:activity-ktx:1.10.0'\n    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.7'
+    implementation 'androidx.activity:activity-ktx:1.10.0'
+    implementation 'androidx.core:core-ktx:1.15.0'
 }
