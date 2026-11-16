@@ -44,7 +44,7 @@ class LiveCallActivity : Activity() {
         val join = Button(this).apply { text = "Connect / Start Call" }
         val leave = Button(this).apply { text = "End Call" }
         videoRenderer = SurfaceViewRenderer(this).apply {
-            visibility = if (mode == "video") View.VISIBLE else View.GONE
+            visibility = if (mode != "audio") View.VISIBLE else View.GONE
         }
         root.addView(status)
         root.addView(roomInput)
@@ -63,7 +63,7 @@ class LiveCallActivity : Activity() {
 
     private fun connectCall() {
         val needs = mutableListOf(Manifest.permission.RECORD_AUDIO)
-        if (mode == "video") needs.add(Manifest.permission.CAMERA)
+        if (mode != "audio") needs.add(Manifest.permission.CAMERA)
         val missing = needs.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
