@@ -14,88 +14,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-
       - name: Install Android SDK packages
         shell: bash
         run: |
           set -euo pipefail
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          export ANDROID_HOME="$SDK_ROOT"
-          export ANDROID_SDK_ROOT="$SDK_ROOT"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
-          if [[ -z "$SDKMANAGER" ]]; then
-            echo "Android sdkmanager was not found under $SDK_ROOT/cmdline-tools"
-            exit 1
-          fi
-          echo "Using sdkmanager: $SDKMANAGER"
+          test -n "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-
-      - name: Extract Android Studio project
+      - name: Build SUBY MVP preview APK
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p extracted
-          ZIP="$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)"
-          if [[ -z "$ZIP" ]]; then
-            echo "No source ZIP found in repository root."
-            echo "Repository files:"
-            find . -maxdepth 3 -type f | sort | head -200
-            exit 1
-          fi
-          echo "Extracting: $ZIP"
-          unzip -q "$ZIP" -d extracted
-          SETTINGS="$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)"
-          if [[ -z "$SETTINGS" ]]; then
-            echo "The ZIP does not contain an Android Gradle project (settings.gradle/settings.gradle.kts missing)."
-            echo "Extracted files:"
-            find extracted -maxdepth 5 -type f | sort | head -250
-            exit 1
-          fi
-          PROJECT_DIR="$(dirname "$SETTINGS")"
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project: $PROJECT_DIR"
-          find "$PROJECT_DIR" -maxdepth 3 -type f | sort | head -200
-          python3 - "$PROJECT_DIR" <<'PY'
-          import pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          for path in root.rglob("*"):
-              if path.is_file() and path.suffix in {".gradle", ".kts"}:
-                  raw = path.read_bytes()
-                  fixed = raw.replace(b"\\n", b"\n")
-                  if fixed != raw:
-                      path.write_bytes(fixed)
-                      print(f"Repaired escaped newlines in {path}")
-          PY
-
-      - name: Build debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$PROJECT_DIR"
-          if [[ -f gradlew ]]; then
-            chmod +x gradlew
-            ./gradlew --no-daemon assembleDebug --stacktrace
-          else
-            gradle --no-daemon assembleDebug --stacktrace
-          fi
-
+          cd SUBY_MVP
+          gradle --no-daemon assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SUBY-APK
-          path: |
-            **/build/outputs/apk/debug/*.apk
+          name: SUBY-MVP-Preview-APK
+          path: SUBY_MVP/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
