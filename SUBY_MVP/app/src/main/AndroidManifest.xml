@@ -5,13 +5,10 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <application
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:label="SUBY"
-        android:usesCleartextTraffic="false">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:label="SUBY" android:usesCleartextTraffic="false">
+        <activity android:name=".LiveCallActivity" android:exported="false" />
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
