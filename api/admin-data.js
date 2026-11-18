@@ -11,6 +11,12 @@ function getAdmin() {
 
 module.exports = async function (req, res) {
   res.setHeader("Cache-Control", "no-store");
+  const origin = req.headers.origin || "";
+  const allowedOrigins = new Set(["https://suby-admin.vercel.app", "https://suby-admin-ddeepa353.vercel.app"]);
+  if (allowedOrigins.has(origin)) { res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Vary", "Origin"); }
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "Method not allowed" });
