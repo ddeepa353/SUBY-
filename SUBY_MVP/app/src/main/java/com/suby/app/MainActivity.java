@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
             }
             Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
             if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
-            out.put("ok", true); out.put("email", user.getEmail());
+            out.put("ok", true); out.put("email", user.getEmail()); out.put("uid", user.getUid());
             out.put("name", String.valueOf(p.getOrDefault("name", user.getDisplayName())));
             out.put("role", String.valueOf(p.getOrDefault("role", "user")));
             out.put("status", String.valueOf(p.getOrDefault("status", "active")));
@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
               else {
                 Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
                 if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
-                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail());
+                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail()); out.put("uid", user.getUid());
                 out.put("name", String.valueOf(p.getOrDefault("name", user.getDisplayName())));
                 out.put("role", String.valueOf(p.getOrDefault("role", "user")));
                 out.put("status", String.valueOf(p.getOrDefault("status", "active")));
