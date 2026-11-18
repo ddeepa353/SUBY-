@@ -92,8 +92,8 @@ class LiveCallActivity : ComponentActivity() {
             try {
                 val credentials = withContext(Dispatchers.IO) {
                     val auth = FirebaseAuth.getInstance()
-                    val user = auth.currentUser ?: Tasks.await(auth.signInAnonymously()).user
-                        ?: throw IllegalStateException("Firebase sign-in failed")
+                    val user = auth.currentUser
+                        ?: throw IllegalStateException("पहले SUBY में अपने verified account से Login करें। Anonymous sign-in बंद है।")
                     val idToken = Tasks.await(user.getIdToken(false)).token
                         ?: throw IllegalStateException("Firebase ID token missing")
                     requestCallToken(roomName, idToken)
@@ -115,6 +115,17 @@ class LiveCallActivity : ComponentActivity() {
                 status.text = "Connected • Room: $roomName"
             } catch (e: Exception) {
                 status.text = "कनेक्शन नहीं हुआ: ${e.message ?: "Firebase / server settings जाँचें"}"
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 301) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                connectCall()
+            } else {
+                status.text = "Camera और Microphone की अनुमति के बिना कॉल शुरू नहीं हो सकती।"
             }
         }
     }
