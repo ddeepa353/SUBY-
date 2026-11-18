@@ -16,7 +16,7 @@ module.exports = async function (req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   try {
-    const match = (req.headers.authorization || "").match(/^Bearer\\s+(.+)$/i);
+    const match = (req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
     if (!match) return res.status(401).json({ error: "Sign-in required" });
     const dbAdmin = getAdmin();
     const decoded = await dbAdmin.auth().verifyIdToken(match[1]);
