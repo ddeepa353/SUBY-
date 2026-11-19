@@ -53,6 +53,7 @@ class LiveCallActivity : ComponentActivity() {
         }
         val join = Button(this).apply { text = "Connect / Start Call" }
         val leave = Button(this).apply { text = "End Call" }
+        val gifts = Button(this).apply { text = "🎁 Gifts · Kiss" }
         videoRenderer = SurfaceViewRenderer(this).apply {
             visibility = if (mode == "audio") View.GONE else View.VISIBLE
         }
@@ -60,6 +61,7 @@ class LiveCallActivity : ComponentActivity() {
         root.addView(roomInput)
         root.addView(join)
         root.addView(leave)
+        if (mode == "audio" || mode == "video") root.addView(gifts)
         root.addView(videoRenderer, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
         ))
@@ -67,6 +69,7 @@ class LiveCallActivity : ComponentActivity() {
 
         join.setOnClickListener { connectCall() }
         leave.setOnClickListener { disconnectCall() }
+        gifts.setOnClickListener { showGifts() }
     }
 
     private fun connectCall() {
@@ -110,9 +113,9 @@ class LiveCallActivity : ComponentActivity() {
                 status.text = "LiveKit से जुड़ रहे हैं..."
                 room.connect(credentials.first, credentials.second)
                 if (mode != "audio") room.initVideoRenderer(videoRenderer)
-                room.localParticipant.setMicrophoneEnabled(true)
-                if (mode != "audio") room.localParticipant.setCameraEnabled(true)
-                status.text = "Connected • Room: $roomName"
+                if (mode != "watch") room.localParticipant.setMicrophoneEnabled(mode == "audio" || mode == "video" || mode == "live")
+                if (mode == "video" || mode == "live") room.localParticipant.setCameraEnabled(true)
+                status.text = if (mode == "watch") "Watching Live • Room: $roomName" else "Connected • Room: $roomName"
             } catch (e: Exception) {
                 status.text = "कनेक्शन नहीं हुआ: ${e.message ?: "Firebase / server settings जाँचें"}"
             }
@@ -154,6 +157,17 @@ class LiveCallActivity : ComponentActivity() {
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun showGifts() {
+        val labels = arrayOf("🌹 Rose · 50 Kiss", "💗 Heart · 100 Kiss", "🧸 Teddy · 200 Kiss", "👑 Crown · 500 Kiss", "💎 Diamond · 1,000 Kiss", "🚀 Rocket · 2,000 Kiss", "🏰 Castle · 5,000 Kiss", "🌟 Super Star · 10,000 Kiss")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("SUBY Gifts · Kiss")
+            .setItems(labels) { dialog, which ->
+                android.widget.Toast.makeText(this, labels[which] + " चुना गया। Wallet deduction अभी backend से जुड़ा नहीं है।", android.widget.Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun disconnectCall() {
