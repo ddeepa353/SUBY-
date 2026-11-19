@@ -161,7 +161,7 @@ class LiveCallActivity : ComponentActivity() {
 
     private fun showGifts() {
         val labels = arrayOf("🌹 Rose · 50 Kiss", "💗 Heart · 100 Kiss", "🧸 Teddy · 200 Kiss", "👑 Crown · 500 Kiss", "💎 Diamond · 1,000 Kiss", "🚀 Rocket · 2,000 Kiss", "🏰 Castle · 5,000 Kiss", "🌟 Super Star · 10,000 Kiss")
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        android.app.AlertDialog.Builder(this)
             .setTitle("SUBY Gifts · Kiss")
             .setItems(labels) { dialog, which ->
                 android.widget.Toast.makeText(this, labels[which] + " चुना गया। Wallet deduction अभी backend से जुड़ा नहीं है।", android.widget.Toast.LENGTH_LONG).show()
