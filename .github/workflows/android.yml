@@ -38,6 +38,16 @@ jobs:
           set -euo pipefail
           cd SUBY_MVP
           gradle --no-daemon assembleDebug --stacktrace
+      - name: Verify APK signature and package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=SUBY_MVP/app/build/outputs/apk/debug/app-debug.apk
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          unzip -t "$APK" >/dev/null
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -49,8 +59,8 @@ jobs:
       - name: Publish public APK download
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.7.1-preview
-          name: SUBY Android Preview v0.7.1
+          tag_name: v0.7.2-preview
+          name: SUBY Android Preview v0.7.2
           body: |
             SUBY Android preview APK. Install only on Android devices. This is a preview build; some payment, wallet and calling features may require backend activation and testing.
           files: SUBY_MVP/app/build/outputs/apk/debug/*.apk
