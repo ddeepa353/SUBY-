@@ -81,27 +81,40 @@ public class MainActivity extends Activity {
             out.put("role", String.valueOf(p.getOrDefault("role", "user")));
             out.put("status", String.valueOf(p.getOrDefault("status", "active")));
           } else if ("session".equals(action)) {
-            // Firebase Auth persists sessions across app switches and process restarts.
-            // Avoid a network reload on every foreground transition.
+            // Firebase Auth persists across app switches; use cached profile if network is unavailable.
             user = auth.getCurrentUser();
-            if (user == null) { out.put("ok", true); out.put("signedIn", false); }
-            else {
-              if (!user.isEmailVerified()) { out.put("ok", true); out.put("signedIn", false); }
-              else {
+            if (user == null) {
+              out.put("ok", true); out.put("signedIn", false);
+            } else {
+              try {
                 Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
-                if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
-                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail()); out.put("uid", user.getUid()); out.put("phone", String.valueOf(p.getOrDefault("phone", "")));
+                if (p == null) throw new IllegalStateException("Profile unavailable");
+                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail()); out.put("uid", user.getUid());
+                out.put("phone", String.valueOf(p.getOrDefault("phone", "")));
                 out.put("name", String.valueOf(p.getOrDefault("name", user.getDisplayName())));
                 out.put("role", String.valueOf(p.getOrDefault("role", "user")));
                 out.put("status", String.valueOf(p.getOrDefault("status", "active")));
+              } catch (Exception profileError) {
+                String cached = getSharedPreferences("suby_session", MODE_PRIVATE).getString("profile", "");
+                if (cached.isEmpty()) throw profileError;
+                JSONObject saved = new JSONObject(cached);
+                out.put("ok", true); out.put("signedIn", true); out.put("email", saved.optString("email", user.getEmail()));
+                out.put("uid", user.getUid()); out.put("phone", saved.optString("phone", ""));
+                out.put("name", saved.optString("name", user.getDisplayName()));
+                out.put("role", saved.optString("role", "user")); out.put("status", saved.optString("status", "active"));
               }
             }
           } else if ("logout".equals(action)) {
-            auth.signOut(); out.put("ok", true); out.put("signedIn", false);
+            auth.signOut();
+            getSharedPreferences("suby_session", MODE_PRIVATE).edit().remove("profile").apply();
+            out.put("ok", true); out.put("signedIn", false);
           } else throw new IllegalArgumentException("Unknown action");
         } catch (Exception e) {
           String m = e.getCause() != null && e.getCause().getMessage() != null ? e.getCause().getMessage() : e.getMessage();
           try { out.put("ok", false); out.put("message", m == null ? "कुछ गलत हुआ।" : m); } catch (Exception ignored) {}
+        }
+        if (out.optBoolean("ok") && out.has("uid")) {
+          getSharedPreferences("suby_session", MODE_PRIVATE).edit().putString("profile", out.toString()).apply();
         }
         callback(callbackId, out);
       });
@@ -193,7 +206,17 @@ public class MainActivity extends Activity {
     web.setWebViewClient(new WebViewClient());
     web.setWebChromeClient(new WebChromeClient());
     setContentView(web);
-    web.loadUrl("file:///android_asset/index.html");
+    if (state != null && web.restoreState(state) != null) {
+      // Restore the existing page and current navigation state.
+    } else {
+      web.loadUrl("file:///android_asset/index.html");
+    }
+  }
+
+  @Override protected void onResume() {
+    super.onResume();
+    if (web != null) web.postDelayed(() ->
+      web.evaluateJavascript("window.refreshSession && window.refreshSession()", null), 350);
   }
 
   @Override public void onBackPressed() {
