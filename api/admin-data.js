@@ -31,7 +31,7 @@ module.exports = async function (req, res) {
       return res.status(403).json({ error: "Owner access denied" });
     }
 
-    const allowed = new Set(["users", "hosts", "rechargeRequests", "withdrawals", "calls"]);
+    const allowed = new Set(["users", "hosts", "rechargeRequests", "withdrawals", "calls", "giftTransactions", "supportTickets"]);
     const collection = String(req.query.collection || "users");
     if (!allowed.has(collection)) return res.status(400).json({ error: "Unknown data section" });
     const limit = Math.min(Math.max(parseInt(req.query.limit || "50", 10) || 50, 1), 100);
