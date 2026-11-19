@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     }
 
     @JavascriptInterface public void auth(String action, String name, String email, String password,
-                                          String role, String callbackId) {
+                                          String role, String callbackId, String phone) {
       executor.execute(() -> {
         JSONObject out = new JSONObject();
         try {
@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
             Tasks.await(user.sendEmailVerification());
             Map<String,Object> p = new HashMap<>();
             p.put("uid", user.getUid()); p.put("name", name.trim());
-            p.put("email", email.trim().toLowerCase()); p.put("role", role);
+            p.put("email", email.trim().toLowerCase()); p.put("phone", phone == null ? "" : phone.trim()); p.put("role", role);
             p.put("status", "host".equals(role) ? "pending" : "active");
             p.put("createdAt", System.currentTimeMillis());
             Tasks.await(db.collection("users").document(user.getUid()).set(p));
@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
             }
             Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
             if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
-            out.put("ok", true); out.put("email", user.getEmail()); out.put("uid", user.getUid());
+            out.put("ok", true); out.put("email", user.getEmail()); out.put("uid", user.getUid()); out.put("phone", String.valueOf(p.getOrDefault("phone", "")));
             out.put("name", String.valueOf(p.getOrDefault("name", user.getDisplayName())));
             out.put("role", String.valueOf(p.getOrDefault("role", "user")));
             out.put("status", String.valueOf(p.getOrDefault("status", "active")));
@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
               else {
                 Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
                 if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
-                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail()); out.put("uid", user.getUid());
+                out.put("ok", true); out.put("signedIn", true); out.put("email", user.getEmail()); out.put("uid", user.getUid()); out.put("phone", String.valueOf(p.getOrDefault("phone", "")));
                 out.put("name", String.valueOf(p.getOrDefault("name", user.getDisplayName())));
                 out.put("role", String.valueOf(p.getOrDefault("role", "user")));
                 out.put("status", String.valueOf(p.getOrDefault("status", "active")));
@@ -100,12 +100,67 @@ public class MainActivity extends Activity {
     }
   }
 
+  public class SubySupportBridge {
+    @JavascriptInterface public void support(String category, String message, String callbackId) {
+      executor.execute(() -> {
+        JSONObject out = new JSONObject();
+        try {
+          FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+          if (user == null) throw new IllegalStateException("पहले Login करें।");
+          if (message == null || message.trim().length() < 10) throw new IllegalArgumentException("समस्या विस्तार से लिखें।");
+          Map<String,Object> ticket = new HashMap<>();
+          ticket.put("uid", user.getUid()); ticket.put("email", user.getEmail());
+          ticket.put("category", category == null ? "Other" : category);
+          ticket.put("message", message.trim()); ticket.put("status", "open");
+          ticket.put("createdAt", System.currentTimeMillis());
+          String id = FirebaseFirestore.getInstance().collection("supportTickets").document().getId();
+          Tasks.await(FirebaseFirestore.getInstance().collection("supportTickets").document(id).set(ticket));
+          out.put("ok", true); out.put("ticketId", id);
+        } catch (Exception e) {
+          String m = e.getCause() != null && e.getCause().getMessage() != null ? e.getCause().getMessage() : e.getMessage();
+          try { out.put("ok", false); out.put("message", m == null ? "Support request नहीं भेजी जा सकी।" : m); } catch (Exception ignored) {}
+        }
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.onNativeSupportResult && window.onNativeSupportResult(" + out.toString() + ");", null); });
+      });
+    }
+
+    @JavascriptInterface public void history(String callbackId) {
+      executor.execute(() -> {
+        JSONObject out = new JSONObject();
+        try {
+          FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+          if (user == null) throw new IllegalStateException("पहले Login करें।");
+          org.json.JSONArray items = new org.json.JSONArray();
+          String[] collections = {"rechargeRequests", "giftTransactions", "withdrawals"};
+          for (String collection : collections) {
+            com.google.firebase.firestore.QuerySnapshot snap = Tasks.await(
+              FirebaseFirestore.getInstance().collection(collection).whereEqualTo("uid", user.getUid()).limit(50).get());
+            for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+              Map<String,Object> data = doc.getData();
+              if (data == null) continue;
+              JSONObject item = new JSONObject();
+              item.put("type", collection); item.put("amount", data.get("amount") == null ? 0 : data.get("amount"));
+              item.put("status", data.get("status") == null ? "Recorded" : String.valueOf(data.get("status")));
+              items.put(item);
+            }
+          }
+          out.put("ok", true); out.put("items", items);
+        } catch (Exception e) {
+          String m = e.getCause() != null && e.getCause().getMessage() != null ? e.getCause().getMessage() : e.getMessage();
+          try { out.put("ok", false); out.put("message", m == null ? "History load नहीं हुई।" : m); } catch (Exception ignored) {}
+        }
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.onNativeHistoryResult && window.onNativeHistoryResult(" + out.toString() + ");", null); });
+      });
+    }
+  }
+
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     web = new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
     web.getSettings().setDomStorageEnabled(true);
     web.addJavascriptInterface(new SubyBridge(), "SubyNative");
+    web.addJavascriptInterface(new SubySupportBridge(), "SubyNativeSupport");
     web.setWebViewClient(new WebViewClient());
     web.setWebChromeClient(new WebChromeClient());
     setContentView(web);
