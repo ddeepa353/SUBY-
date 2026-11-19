@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
   private WebView web;
+  private String activeScreen = "home";
+  private long lastBackPress = 0;
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   private void callback(String id, JSONObject data) {
@@ -30,6 +32,10 @@ public class MainActivity extends Activity {
   }
 
   public class SubyBridge {
+    @JavascriptInterface public void screenChanged(String screen) {
+      if (screen != null) activeScreen = screen;
+    }
+
     @JavascriptInterface public void openCall(String mode, String hostUid) {
       runOnUiThread(() -> {
         Intent i = new Intent(MainActivity.this, LiveCallActivity.class);
@@ -75,11 +81,12 @@ public class MainActivity extends Activity {
             out.put("role", String.valueOf(p.getOrDefault("role", "user")));
             out.put("status", String.valueOf(p.getOrDefault("status", "active")));
           } else if ("session".equals(action)) {
+            // Firebase Auth persists sessions across app switches and process restarts.
+            // Avoid a network reload on every foreground transition.
             user = auth.getCurrentUser();
             if (user == null) { out.put("ok", true); out.put("signedIn", false); }
             else {
-              Tasks.await(user.reload()); user = auth.getCurrentUser();
-              if (user == null || !user.isEmailVerified()) { out.put("ok", true); out.put("signedIn", false); }
+              if (!user.isEmailVerified()) { out.put("ok", true); out.put("signedIn", false); }
               else {
                 Map<String,Object> p = Tasks.await(db.collection("users").document(user.getUid()).get()).getData();
                 if (p == null) throw new IllegalStateException("Profile नहीं मिली।");
@@ -190,7 +197,26 @@ public class MainActivity extends Activity {
   }
 
   @Override public void onBackPressed() {
-    if (web != null && web.canGoBack()) web.goBack(); else super.onBackPressed();
+    if (web != null) {
+      if (!"home".equals(activeScreen)) {
+        web.evaluateJavascript("window.subyHandleBack && window.subyHandleBack()", null);
+        return;
+      }
+      if (web.canGoBack()) { web.goBack(); return; }
+      long now = System.currentTimeMillis();
+      if (now - lastBackPress < 1800) super.onBackPressed();
+      else {
+        lastBackPress = now;
+        android.widget.Toast.makeText(this, "बाहर जाने के लिए फिर से Back दबाएँ", android.widget.Toast.LENGTH_SHORT).show();
+      }
+      return;
+    }
+    super.onBackPressed();
+  }
+
+  @Override protected void onSaveInstanceState(Bundle outState) {
+    if (web != null) web.saveState(outState);
+    super.onSaveInstanceState(outState);
   }
 
   @Override protected void onDestroy() {
