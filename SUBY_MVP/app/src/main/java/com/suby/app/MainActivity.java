@@ -124,6 +124,27 @@ public class MainActivity extends Activity {
       });
     }
 
+    @JavascriptInterface public void listHosts(String callbackId) {
+      executor.execute(() -> {
+        JSONObject out = new JSONObject();
+        try {
+          com.google.firebase.firestore.QuerySnapshot snap = Tasks.await(
+            FirebaseFirestore.getInstance().collection("users").whereEqualTo("role", "host").whereEqualTo("status", "active").limit(50).get());
+          org.json.JSONArray items = new org.json.JSONArray();
+          for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+            JSONObject item = new JSONObject();
+            item.put("uid", doc.getId());
+            item.put("name", String.valueOf(doc.getString("name") == null ? "SUBY Host" : doc.getString("name")));
+            items.put(item);
+          }
+          out.put("ok", true); out.put("hosts", items);
+        } catch (Exception e) {
+          try { out.put("ok", false); out.put("message", e.getMessage()); } catch (Exception ignored) {}
+        }
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.onNativeHostsResult && window.onNativeHostsResult(" + out.toString() + ");", null); });
+      });
+    }
+
     @JavascriptInterface public void history(String callbackId) {
       executor.execute(() -> {
         JSONObject out = new JSONObject();
