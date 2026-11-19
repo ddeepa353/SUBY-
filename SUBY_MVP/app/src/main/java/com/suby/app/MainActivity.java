@@ -30,10 +30,11 @@ public class MainActivity extends Activity {
   }
 
   public class SubyBridge {
-    @JavascriptInterface public void openCall(String mode) {
+    @JavascriptInterface public void openCall(String mode, String hostUid) {
       runOnUiThread(() -> {
         Intent i = new Intent(MainActivity.this, LiveCallActivity.class);
         i.putExtra("mode", mode);
+        i.putExtra("hostUid", hostUid == null ? "" : hostUid);
         startActivity(i);
       });
     }
