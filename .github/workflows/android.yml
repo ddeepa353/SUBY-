@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -45,3 +45,15 @@ jobs:
           path: SUBY_MVP/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish public APK download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.7.1-preview
+          name: SUBY Android Preview v0.7.1
+          body: |
+            SUBY Android preview APK. Install only on Android devices. This is a preview build; some payment, wallet and calling features may require backend activation and testing.
+          files: SUBY_MVP/app/build/outputs/apk/debug/*.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
