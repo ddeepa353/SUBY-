@@ -25,7 +25,7 @@ function openProfile(){if(!currentProfile){openAuth();return}document.getElement
 document.addEventListener('DOMContentLoaded',()=>{if(window.SubyNative&&window.SubyNative.auth)window.SubyNative.auth('session','','','','','session')});
 let currentUPI='',currentQR='',chosen=null,chosenAmount=0;
 const gifts=[['Rose','🌹',50],['Heart','💗',100],['Teddy','🧸',200],['Crown','👑',500],['Diamond','💎',1000],['Rocket','🚀',2000],['Castle','🏰',5000],['Super Star','🌟',10000]];
-document.getElementById('giftGrid').innerHTML=gifts.map((g,i)=>'<button class="gift" id="gift'+i+'" onclick="choose('+i+')"><div class="giftart">'+g[1]+'</div><div class="giftname">'+g[0]+'</div><div class="giftprice">₹'+g[2]+'</div></button>').join('');
+document.getElementById('giftGrid').innerHTML=gifts.map((g,i)=>'<button class="gift" id="gift'+i+'" onclick="choose('+i+')"><div class="giftart">'+g[1]+'</div><div class="giftname">'+g[0]+'</div><div class="giftprice">'+g[2]+' Kiss</div></button>').join('');
 function choose(i){chosen=i;document.querySelectorAll('.gift').forEach(x=>x.classList.remove('selected'));document.getElementById('gift'+i).classList.add('selected');let p=gifts[i][2];document.getElementById('giftSummary').textContent=gifts[i][1]+' '+gifts[i][0]+' · '+p+' Kiss · मूल्य ₹'+(p*0.10).toFixed(2)}
 function openGifts(){document.getElementById("giftOverlay").style.display="block"}
 function closeGifts(){document.getElementById("giftOverlay").style.display="none"}
